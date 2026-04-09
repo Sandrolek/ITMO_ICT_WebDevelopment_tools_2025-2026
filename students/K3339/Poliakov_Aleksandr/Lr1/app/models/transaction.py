@@ -2,18 +2,12 @@ from datetime import date
 from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from app.models.category import TransactionType
+from app.models.links import TransactionCategory
 
 if TYPE_CHECKING:
     from app.models.account import Account
     from app.models.user import User
     from app.models.category import Category
-
-
-class TransactionCategory(SQLModel, table=True):
-    transaction_id: int = Field(foreign_key="transaction.id", primary_key=True)
-    category_id: int = Field(foreign_key="category.id", primary_key=True)
-    is_primary: bool = Field(default=False)
-    note: Optional[str] = None
 
 
 class Transaction(SQLModel, table=True):

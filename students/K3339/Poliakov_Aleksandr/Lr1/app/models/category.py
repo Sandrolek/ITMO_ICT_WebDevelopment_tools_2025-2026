@@ -1,9 +1,10 @@
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
+from app.models.links import TransactionCategory
 
 if TYPE_CHECKING:
-    from app.models.transaction import Transaction, TransactionCategory
+    from app.models.transaction import Transaction
 
 
 class TransactionType(str, Enum):
@@ -18,5 +19,5 @@ class Category(SQLModel, table=True):
     type: TransactionType
 
     transactions: list["Transaction"] = Relationship(
-        back_populates="categories", link_model="TransactionCategory"
+        back_populates="categories", link_model=TransactionCategory
     )
