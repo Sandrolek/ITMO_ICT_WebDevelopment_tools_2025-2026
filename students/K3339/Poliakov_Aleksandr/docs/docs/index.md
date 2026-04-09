@@ -1,6 +1,6 @@
 # Сервис управления личными финансами
 
-**Студент:** Poliakov Aleksandr, группа K3339  
+**Студент:** Поляков Александр, группа K3339  
 **Репозиторий:** [GitHub](https://github.com/Sandrolek/ITMO_ICT_WebDevelopment_tools_2025-2026/tree/lr1/students/K3339/Poliakov_Aleksandr)
 
 ## Описание проекта
