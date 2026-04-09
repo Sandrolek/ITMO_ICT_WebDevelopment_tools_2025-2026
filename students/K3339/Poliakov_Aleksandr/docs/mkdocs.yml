@@ -1,0 +1,13 @@
+site_name: Personal Finance Manager — Лабораторная 1
+site_author: Poliakov Aleksandr
+site_description: Отчёт по лабораторной работе 1
+
+nav:
+  - Главная: index.md
+  - Практика 1: pr1.md
+  - Практика 2: pr2.md
+  - Практика 3: pr3.md
+  - Лабораторная 1: lr1.md
+
+theme:
+  name: material
