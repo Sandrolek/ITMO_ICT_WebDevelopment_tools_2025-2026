@@ -15,6 +15,7 @@ class Transaction(SQLModel, table=True):
     amount: float
     description: Optional[str] = None
     date: date
+    location: Optional[str] = None
     type: TransactionType
     account_id: int = Field(foreign_key="account.id")
     user_id: int = Field(foreign_key="user.id")
