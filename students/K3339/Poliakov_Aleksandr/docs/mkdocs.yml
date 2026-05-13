@@ -1,6 +1,6 @@
-site_name: Personal Finance Manager — Лабораторная 1
+site_name: ITMO Web Dev — Поляков Александр (K3339)
 site_author: Поляков Александр
-site_description: Отчёт по лабораторной работе 1
+site_description: Отчёты по практикам и лабораторным работам
 
 nav:
   - Главная: index.md
@@ -8,6 +8,7 @@ nav:
   - Практика 2: pr2.md
   - Практика 3: pr3.md
   - Лабораторная 1: lr1.md
+  - Лабораторная 2: lr2.md
 
 theme:
   name: material
