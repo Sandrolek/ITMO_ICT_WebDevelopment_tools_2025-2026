@@ -2,7 +2,7 @@
 
 **Папка:** [`Lr2/`](https://github.com/Sandrolek/ITMO_ICT_WebDevelopment_tools_2025-2026/tree/lr1/students/K3339/Poliakov_Aleksandr/Lr2)
 
-Цель — практически прочувствовать разницу между `threading`, `multiprocessing` и `asyncio`: где какой подход выигрывает, где упирается в GIL, где помогает asyncio. Лабораторная состоит из двух задач — CPU-bound (сумма чисел) и I/O-bound (параллельный парсинг сайтов).
+Сделал две задачи: суммирование чисел и параллельный парсинг сайтов. Каждую — в трёх вариантах (`threading`, `multiprocessing`, `asyncio`) и сравнил времена.
 
 ## Структура проекта
 
@@ -29,12 +29,12 @@ Lr2/
 
 ## Задача 1. Сумма чисел от 1 до 10¹³
 
-### Общая логика
+Считать честным циклом до 10¹³ невозможно — это часы работы CPU. Поэтому общая логика в `common_sum.py` поддерживает два режима:
 
-В `common_sum.py` диапазон `[1, N]` делится на `workers` равных частей; каждая часть считается одним из двух способов:
+- `formula` — арифметическая прогрессия `(s + e) * (e - s + 1) // 2` на каждый чанк. Так считается реальный N = 10¹³ за миллисекунды и получается корректный ответ `50000000000005000000000000`.
+- `loop` — обычный `for`-цикл. Нужен только для того, чтобы было что замерять — иначе разницы между подходами на такой быстрой задаче не увидеть.
 
-- `arithmetic_sum(s, e) = (s + e) * (e - s + 1) // 2` — корректно для `N = 10¹³`, где честный `for`-цикл нереалистичен.
-- `loop_sum(s, e)` — суммирование в цикле; нужен только для демонстрации CPU-bound нагрузки.
+Разбиение диапазона одинаковое для всех вариантов:
 
 ```python
 def split_range(start: int, end: int, parts: int) -> list[RangePart]:
@@ -50,7 +50,7 @@ def split_range(start: int, end: int, parts: int) -> list[RangePart]:
 
 ### Threading
 
-Поток для каждой части диапазона, результат пишется в общий список по индексу — без блокировки, потому что разные индексы.
+Поток на каждый чанк, результат пишется в общий список по индексу:
 
 ```python
 def run(n: int, workers: int, mode: str):
@@ -64,11 +64,11 @@ def run(n: int, workers: int, mode: str):
     return sum(results)
 ```
 
-CPython держит GIL — в loop-режиме поток за поток поочерёдно исполняют байткод, а не одновременно. Поэтому ускорения над однопоточной версией почти нет.
+Лока на запись не нужно — каждый поток пишет в свой индекс.
 
 ### Multiprocessing
 
-Несколько процессов, у каждого свой интерпретатор и память. Используется `multiprocessing.Pool.map`:
+Через `Pool.map`, чтобы не возиться с очередями:
 
 ```python
 def run(n: int, workers: int, mode: str):
@@ -79,11 +79,9 @@ def run(n: int, workers: int, mode: str):
     return sum(results)
 ```
 
-Здесь каждый процесс реально выполняется на своём ядре — GIL не мешает. Цена — оверхед на запуск процессов и сериализацию аргументов через `pickle`.
-
 ### Asyncio
 
-`asyncio` не даёт CPU-параллелизма: одна event-loop, переключения только на `await`. Чтобы цикл не зависал на много секунд, добавлены checkpoint-ы:
+Тут сложнее всего, потому что `asyncio` не параллелит CPU сам по себе. Если просто завернуть цикл в `async def`, выполнение всё равно идёт последовательно — нужно явно отдавать управление loop'у:
 
 ```python
 async def calculate_sum(start, end, mode):
@@ -98,49 +96,47 @@ async def calculate_sum(start, end, mode):
     return total
 ```
 
-`await asyncio.sleep(0)` отдаёт управление loop'у — это единственный способ кооперативного переключения. На CPU-bound коде это даёт только просадку производительности относительно прямого однопоточного цикла.
+`asyncio.sleep(0)` каждые 200к итераций — это и есть «кооперативная» точка переключения. Изначально я ставил её чаще, но это сильно проседало по времени; 200к — нормальный компромисс.
 
 ### Замеры — loop mode, N = 5·10⁷, 4 воркера, 3 повтора
 
-| Подход | Min, сек | Mean, сек | Max, сек | Комментарий |
-|---|---:|---:|---:|---|
-| threading | 0.947 | 0.955 | 0.960 | GIL не даёт реального параллелизма на байткоде |
-| multiprocessing | 0.269 | 0.278 | 0.283 | Реально работает на нескольких ядрах |
-| asyncio | 2.241 | 2.260 | 2.280 | Хуже однопотока — checkpoint-ы добавляют оверхед |
+| Подход | Min, сек | Mean, сек | Max, сек |
+|---|---:|---:|---:|
+| threading | 0.947 | 0.955 | 0.960 |
+| multiprocessing | 0.269 | 0.278 | 0.283 |
+| asyncio | 2.241 | 2.260 | 2.280 |
 
 ### Замеры — formula mode, N = 10¹³, 4 воркера, 3 повтора
 
-| Подход | Min, сек | Mean, сек | Max, сек | Комментарий |
-|---|---:|---:|---:|---|
-| threading | 0.000412 | 0.000541 | 0.000747 | Формула — O(1), потоки лишь добавляют чуть оверхеда |
-| multiprocessing | 0.007685 | 0.007783 | 0.007871 | Запуск пула процессов дороже самой задачи |
-| asyncio | 0.000053 | 0.000056 | 0.000060 | Самое быстрое — почти ничего не делает |
+| Подход | Min, сек | Mean, сек | Max, сек |
+|---|---:|---:|---:|
+| threading | 0.000412 | 0.000541 | 0.000747 |
+| multiprocessing | 0.007685 | 0.007783 | 0.007871 |
+| asyncio | 0.000053 | 0.000056 | 0.000060 |
 
-Корректный результат для N = 10¹³: `50000000000005000000000000`.
+### Что заметил
 
-### Выводы по задаче 1
+В `loop`-режиме `multiprocessing` оказался в ~3.5 раза быстрее `threading` — это и есть тот самый эффект GIL: процессы реально считают на разных ядрах, а потоки делят одно. `asyncio` для CPU-нагрузки вообще не годится: оказался в ~2.4 раза медленнее `threading`, потому что `await asyncio.sleep(0)` — это не магия, а просто лишние переключения контекста.
 
-- На «честной» CPU-bound нагрузке (`loop`) — `multiprocessing` обгоняет `threading` примерно в 3.5 раза, потому что обходит GIL. `asyncio` оказывается *медленнее* однопоточного решения: вытесняющего планирования нет, а checkpoint-ы тормозят.
-- На «обходной» нагрузке (`formula`) задача сводится к одной операции на чанк, поэтому выигрывает подход с наименьшим оверхедом запуска — `asyncio`. У `multiprocessing` оверхед запуска пула на два порядка больше самой задачи.
-- Главный вывод: `asyncio` ≠ параллелизм. Для CPU нужны процессы или нативные расширения, а потоки полезны только если время реально проводят в ожидании I/O.
+В `formula`-режиме самой задачи фактически нет — одна арифметическая операция на чанк. Поэтому выигрывает тот, у кого меньше оверхеда на запуск, и это `asyncio` (один event loop, без потоков и процессов). `multiprocessing` тут аутсайдер — спавнить пул процессов ради `(a+b)*n/2` бессмысленно.
 
-## Задача 2. Параллельный парсинг сайтов с сохранением в Postgres из Lr1
+Главный вывод для себя: `asyncio` ≠ параллелизм. Когда нужно реально считать — это `multiprocessing` или нативные расширения.
 
-В этой задаче результаты пишутся не в локальный SQLite, а в **ту же Postgres-БД, что использует Лабораторная 1** (`finance_db` на `postgres:postgres@localhost:5432`). Для `asyncio`-варианта подключение к БД тоже асинхронное (`asyncpg` + `SQLAlchemy[asyncio]` + `AsyncSession`). Для `threading` и `multiprocessing` подключение остаётся синхронным (`psycopg2` + `Session`) — это естественно для соответствующих моделей параллелизма.
+## Задача 2. Параллельный парсинг сайтов в Postgres из Lr1
+
+Решил писать не в SQLite, а в ту же Postgres-БД, что и Lr1 (`finance_db`, контейнер из `Lr1/docker-compose.yml`). Для `asyncio`-варианта подключение к БД тоже асинхронное — `asyncpg` через `SQLAlchemy[asyncio]`. Для threading/multiprocessing оставил синхронный `psycopg2` + `SQLModel.Session`: совать `asyncio.run()` внутрь потоков и форков смысла нет.
 
 ### Запуск Postgres
 
 ```bash
 cd Lr1
-docker compose up -d db          # сервис db из docker-compose.yml Lr1
-# параметры по умолчанию: postgres / postgres / finance_db / localhost:5432
+docker compose up -d db
+# postgres / postgres / finance_db / localhost:5432
 ```
 
-Lr1-app поднимать не нужно — Task 2 общается с Postgres напрямую.
+Само Lr1-приложение поднимать не нужно — Task 2 ходит в Postgres напрямую.
 
-### Схема и модель
-
-Модель описана через SQLModel в `Lr2/task2/models.py`:
+### Модель
 
 ```python
 class ParsedPage(SQLModel, table=True):
@@ -152,11 +148,11 @@ class ParsedPage(SQLModel, table=True):
     parsed_at: datetime = Field(default_factory=datetime.utcnow)
 ```
 
-Таблица создаётся через `SQLModel.metadata.create_all` при первом запуске любого из вариантов (`init_db_sync()` или `await init_db_async()`). Миграции для Lr1 мы не правим — поэтому при работе с alembic в Lr1 **не нужно** делать `revision --autogenerate`, иначе оно попытается удалить «лишнюю» таблицу `parsed_page`. Обычное `alembic upgrade head` безопасно.
+Таблица создаётся на лету через `SQLModel.metadata.create_all` при первом запуске. Миграцию в `Lr1/alembic/` специально не добавлял — иначе Lr1-сервис при `alembic revision --autogenerate` начал бы пытаться удалить «лишнюю» таблицу. Обычный `alembic upgrade head` от этого никак не страдает.
 
-### UPSERT-семантика
+### UPSERT
 
-В обоих стеках реализован один и тот же паттерн: `SELECT ... WHERE url = :url` → если строка есть, обновить `title`/`parser_type`, иначе вставить новую. Это даёт идемпотентность для повторных прогонов и нормально работает под параллельной записью благодаря `UNIQUE(url)`.
+В обоих стеках одна и та же логика: достать строку по `url`, если есть — обновить, если нет — вставить. Использовать `INSERT ... ON CONFLICT` не стал, потому что хотелось одинакового кода в sync и async ветках, плюс SQLAlchemy-обвязка для onconflict у Postgres получилась бы громоздкой.
 
 ### Список страниц
 
@@ -169,13 +165,9 @@ DEFAULT_URLS = [
 ]
 ```
 
-### Парсинг заголовка
+### Threading
 
-`html_title_parser.TitleParser` наследуется от `html.parser.HTMLParser` и собирает текст между `<title>...</title>`. Если тег отсутствует — возвращается `<no title>`.
-
-### Threading (sync engine)
-
-Список URL делится «через интерливинг» (`urls[i::workers]`), каждый поток обрабатывает свой подсписок, общий результат собирается под `threading.Lock`. Запись идёт через общий `Engine` SQLAlchemy — он thread-safe, каждая сессия получает отдельное соединение из пула.
+Делю URL «через интерливинг» (`urls[i::workers]`), один engine на весь процесс, на каждую запись — своя `Session`:
 
 ```python
 def parse_and_save(url: str) -> dict[str, str]:
@@ -195,24 +187,34 @@ def save_page_sync(url, title, parser_type) -> None:
         session.commit()
 ```
 
-Поскольку `urllib.request` и `psycopg2` отпускают GIL во время сетевого ожидания, потоки реально работают параллельно — это классический случай, где threading хорошо подходит.
+`urllib` и `psycopg2` отпускают GIL на сетевом ожидании, так что потоки тут работают «по-настоящему» — это I/O-bound кейс.
 
-### Multiprocessing (sync engine, ленивый на каждый процесс)
+### Multiprocessing
 
-`Engine` создаётся лениво при первом вызове `save_page_sync` — это важно: SQLAlchemy connection pool **не переживает fork**, поэтому каждый worker-процесс должен открыть свой пул сам. `init_db_sync()` вызывается в родительском процессе **до** `Pool.map`, чтобы таблица гарантированно существовала к моменту первой записи.
+Главная ловушка, на которую напоролся: SQLAlchemy `Engine` **не переживает `fork()`**. Если создать engine в родителе, в детях он сломан. Поэтому в `db.py` я сделал engine ленивым — создаётся при первом обращении из текущего процесса:
+
+```python
+_sync_engine = None
+def get_sync_engine():
+    global _sync_engine
+    if _sync_engine is None:
+        _sync_engine = create_engine(SYNC_DB_URL, pool_pre_ping=True)
+    return _sync_engine
+```
+
+А `init_db_sync()` зову один раз в родителе перед `Pool.map`, чтобы таблица гарантированно была:
 
 ```python
 def run(urls, workers):
     init_db_sync()
-    chunks = split_list(urls, workers)
     with mp.Pool(processes=workers) as pool:
-        nested = pool.map(worker_chunk, chunks)
+        nested = pool.map(worker_chunk, split_list(urls, workers))
     return [item for c in nested for item in c]
 ```
 
-### Asyncio + aiohttp + asyncpg (полный async-стек)
+### Asyncio (полный async-стек)
 
-Для асинхронного варианта подключение к БД — тоже асинхронное: `asyncpg` через `SQLAlchemy[asyncio]` (`create_async_engine` + `AsyncSession`). Никаких `asyncio.to_thread` для записи не остаётся — оба ожидания, и сетевое, и БД-шное, идут через event loop.
+В первой версии я писал в БД через `asyncio.to_thread(save_page, ...)` — это работало, но это псевдо-async: запись всё равно блокировала worker-тред. После переноса на Postgres переписал на `asyncpg` + `AsyncSession`:
 
 ```python
 async def parse_and_save(url, session):
@@ -233,7 +235,9 @@ async def save_page_async(url, title, parser_type):
         await session.commit()
 ```
 
-Конфиг URL автоматически берёт сначала `DB_URL` из env (или `.env` через `python-dotenv`), а для async-варианта подменяет `postgresql://` на `postgresql+asyncpg://`:
+Теперь оба ожидания (сеть и БД) идут через event loop, никаких потоков под капотом.
+
+URL подхватываю из `.env` или env-переменной — async-версия получается автоматически подменой префикса драйвера:
 
 ```python
 SYNC_DB_URL  = os.getenv("DB_URL", "postgresql://postgres:postgres@localhost:5432/finance_db")
@@ -242,20 +246,19 @@ ASYNC_DB_URL = SYNC_DB_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 ### Замеры — 8 URL, 4 воркера, 3 повтора, Postgres из Lr1
 
-| Подход | Min, сек | Mean, сек | Max, сек | Комментарий |
-|---|---:|---:|---:|---|
-| threading | 0.867 | 1.092 | 1.540 | Большая дисперсия — один медленный URL тянет поток-«ведро» |
-| multiprocessing | 0.881 | 0.894 | 0.919 | Стабильно, но платит за `fork` + создание engine в каждом процессе |
-| asyncio | 0.597 | 0.699 | 0.878 | Полностью async-стек — самый быстрый |
+| Подход | Min, сек | Mean, сек | Max, сек |
+|---|---:|---:|---:|
+| threading | 0.867 | 1.092 | 1.540 |
+| multiprocessing | 0.881 | 0.894 | 0.919 |
+| asyncio | 0.597 | 0.699 | 0.878 |
 
-> Цифры зависят от сети и от того, какие URL вернут 403 (часть сайтов фильтрует user-agent). Сами цифры стабильнее, чем у предыдущей SQLite-версии, потому что Postgres не упирается в single-writer-bottleneck.
+Цифры заметно скачут между прогонами — это нормально, дисперсию даёт сама сеть. Заметил, что `https://www.wikipedia.org/` иногда возвращает 403 на `aiohttp` (фильтрует по `User-Agent`); `parse_and_save` ловит исключение и пишет `ERROR: ...` в результат — общий прогон от этого не падает.
 
-### Выводы по задаче 2
+### Что заметил
 
-- I/O-bound задача — `asyncio` хорош ровно потому, что один event-loop держит много конкурентных запросов без создания системных потоков. С полным async-стеком (`aiohttp` + `asyncpg`) асинхронность работает «честно» от и до — нет ни одного `asyncio.to_thread`.
-- `threading` всё ещё работает (urllib и psycopg2 отпускают GIL на сетевом ожидании), но имеет большую дисперсию: если один из URL отвечает медленно, целый поток-«ведро» отстаёт.
-- `multiprocessing` для сетевого парсинга — стрельба из пушки по воробьям: оверхед на спавн процессов и инициализацию `Engine` в каждом сравним со временем самих запросов, а никакой выгоды над потоками нет, потому что мы не упираемся в CPU.
-- В отличие от SQLite, Postgres нормально держит параллельные writer-ы — узкое место теперь точно сеть, а не БД. Это и видно по тому, что `multiprocessing` перестал быть быстрее `threading`.
+`asyncio` стал быстрее всех — теперь полностью «честно» асинхронный (`aiohttp` + `asyncpg`, ноль `asyncio.to_thread`). У `threading` дисперсия большая: если один URL отвечает медленно, целое «ведро» из его чанка отстаёт. У `multiprocessing` стабильность хорошая, но за это платится `fork` + создание `Engine` в каждом процессе — выигрыша над threading в I/O-задаче нет.
+
+После переезда с SQLite на Postgres цифры стали стабильнее: SQLite держит только одного writer'а одновременно, и при параллельной записи это становилось узким местом. У Postgres такой проблемы нет, поэтому теперь видно, что упираемся именно в сеть, а не в БД.
 
 ## Запуск
 
@@ -277,7 +280,7 @@ python task1/asyncio_app.py          --n 50000000 --mode loop --workers 4
 # Task 1 benchmark
 python task1/benchmark.py --n 50000000 --mode loop --workers 4 --repeats 3
 
-# Task 2 — сначала поднимаем Postgres из Lr1
+# Task 2 — сначала поднимаю Postgres из Lr1
 (cd ../Lr1 && docker compose up -d db)
 
 python task2/threading_app.py        --workers 4
@@ -288,6 +291,4 @@ python task2/asyncio_app.py          --workers 4
 python task2/benchmark.py --workers 4 --repeats 3
 ```
 
-Адрес/креды БД по умолчанию — те же, что в Lr1 (`postgresql://postgres:postgres@localhost:5432/finance_db`). Можно переопределить через переменную `DB_URL` или файл `.env` рядом со скриптами.
-
-Все три entry-point скрипта для каждой задачи поддерживают `--json` для машинно-читаемого вывода (используется в benchmark.py).
+Креды БД по умолчанию те же, что у Lr1 (`postgresql://postgres:postgres@localhost:5432/finance_db`). Переопределяется через `DB_URL` или `.env` рядом со скриптами. `--json` поддерживается всеми entry-point скриптами — используется внутри `benchmark.py`.
