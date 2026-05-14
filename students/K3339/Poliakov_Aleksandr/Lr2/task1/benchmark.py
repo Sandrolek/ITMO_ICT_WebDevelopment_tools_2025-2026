@@ -33,10 +33,10 @@ def run_script(script: str, n: int, workers: int, mode: str) -> float:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Benchmark task 1 implementations")
-    parser.add_argument("--n", type=int, default=50_000_000)
+    parser.add_argument("--n", type=int, default=100_000_000)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--mode", choices=("formula", "loop"), default="loop")
-    parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--repeats", type=int, default=1)
     return parser.parse_args()
 
 
