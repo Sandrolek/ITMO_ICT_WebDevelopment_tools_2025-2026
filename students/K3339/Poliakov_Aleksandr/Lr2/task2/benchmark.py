@@ -14,15 +14,12 @@ SCRIPTS = [
 ]
 
 
-def run_script(script: str, workers: int, repeat: int) -> float:
-    db_path = Path(f"benchmark_task2_{Path(script).stem}_{repeat}.db")
+def run_script(script: str, workers: int) -> float:
     command = [
         sys.executable,
         script,
         "--workers",
         str(workers),
-        "--db",
-        str(db_path),
         "--json",
     ]
     completed = subprocess.run(command, check=True, capture_output=True, text=True)
@@ -47,7 +44,7 @@ def main() -> None:
     print("|---|---:|---:|---:|")
 
     for approach, script in SCRIPTS:
-        times = [run_script(str(root / script), args.workers, repeat) for repeat in range(args.repeats)]
+        times = [run_script(str(root / script), args.workers) for _ in range(args.repeats)]
         print(
             f"| {approach} | {min(times):.6f} | "
             f"{statistics.mean(times):.6f} | {max(times):.6f} |"

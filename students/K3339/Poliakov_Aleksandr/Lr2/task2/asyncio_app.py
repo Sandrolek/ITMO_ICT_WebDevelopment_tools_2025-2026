@@ -4,11 +4,10 @@ import argparse
 import asyncio
 import json
 import time
-from pathlib import Path
 
 import aiohttp
 
-from db import DEFAULT_DB_PATH, init_db, save_page
+from db import dispose_async_engine, init_db_async, save_page_async
 from html_title_parser import extract_title
 from web_config import DEFAULT_URLS, USER_AGENT
 
@@ -25,14 +24,10 @@ async def fetch_html(session: aiohttp.ClientSession, url: str) -> str:
         return await response.text(errors="replace")
 
 
-async def parse_and_save(
-    url: str,
-    session: aiohttp.ClientSession,
-    db_path: str | Path = DEFAULT_DB_PATH,
-) -> dict[str, str]:
+async def parse_and_save(url: str, session: aiohttp.ClientSession) -> dict[str, str]:
     html = await fetch_html(session, url)
     title = extract_title(html)
-    await asyncio.to_thread(save_page, url, title, "asyncio", db_path)
+    await save_page_async(url, title, "asyncio")
     print(f"[asyncio] {url} -> {title}")
     return {"url": url, "title": title}
 
@@ -40,12 +35,11 @@ async def parse_and_save(
 async def worker(
     urls: list[str],
     session: aiohttp.ClientSession,
-    db_path: str | Path,
 ) -> list[dict[str, str]]:
     results: list[dict[str, str]] = []
     for url in urls:
         try:
-            result = await parse_and_save(url, session, db_path)
+            result = await parse_and_save(url, session)
         except Exception as exc:
             result = {"url": url, "title": f"ERROR: {exc}"}
             print(f"[asyncio] {url} -> ERROR: {exc}")
@@ -53,30 +47,32 @@ async def worker(
     return results
 
 
-async def run_async(urls: list[str], workers: int, db_path: str | Path) -> tuple[list[dict[str, str]], float]:
-    init_db(db_path)
+async def run_async(urls: list[str], workers: int) -> tuple[list[dict[str, str]], float]:
+    await init_db_async()
     chunks = split_list(urls, workers)
     headers = {"User-Agent": USER_AGENT}
 
     started_at = time.perf_counter()
-    async with aiohttp.ClientSession(headers=headers) as session:
-        nested_results = await asyncio.gather(
-            *(worker(chunk, session, db_path) for chunk in chunks)
-        )
-    elapsed = time.perf_counter() - started_at
+    try:
+        async with aiohttp.ClientSession(headers=headers) as session:
+            nested_results = await asyncio.gather(
+                *(worker(chunk, session) for chunk in chunks)
+            )
+        elapsed = time.perf_counter() - started_at
+    finally:
+        await dispose_async_engine()
 
     results = [item for chunk in nested_results for item in chunk]
     return results, elapsed
 
 
-def run(urls: list[str], workers: int, db_path: str | Path) -> tuple[list[dict[str, str]], float]:
-    return asyncio.run(run_async(urls, workers, db_path))
+def run(urls: list[str], workers: int) -> tuple[list[dict[str, str]], float]:
+    return asyncio.run(run_async(urls, workers))
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Task 2: web parsing with asyncio and aiohttp")
     parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
     parser.add_argument("--url", action="append", dest="urls")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
@@ -85,7 +81,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     urls = args.urls or DEFAULT_URLS
-    results, elapsed = run(urls, args.workers, args.db)
+    results, elapsed = run(urls, args.workers)
     payload = {
         "approach": "asyncio",
         "workers": args.workers,
@@ -101,7 +97,6 @@ def main() -> None:
         print(f"Workers: {args.workers}")
         print(f"URLs: {len(urls)}")
         print(f"Saved rows: {len(results)}")
-        print(f"Database: {args.db}")
         print(f"Time: {elapsed:.6f} sec")
 
 

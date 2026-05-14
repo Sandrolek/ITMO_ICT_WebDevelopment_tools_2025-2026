@@ -1,1 +1,6 @@
 aiohttp>=3.9
+sqlmodel>=0.0.16
+SQLAlchemy[asyncio]>=2.0
+psycopg2-binary>=2.9
+asyncpg>=0.29
+python-dotenv>=1.0

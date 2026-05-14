@@ -4,10 +4,9 @@ import argparse
 import json
 import threading
 import time
-from pathlib import Path
 from urllib.request import Request, urlopen
 
-from db import DEFAULT_DB_PATH, init_db, save_page
+from db import init_db_sync, save_page_sync
 from html_title_parser import extract_title
 from web_config import DEFAULT_URLS, USER_AGENT
 
@@ -25,18 +24,18 @@ def fetch_html(url: str, timeout: int = 15) -> str:
         return response.read().decode(charset, errors="replace")
 
 
-def parse_and_save(url: str, db_path: str | Path = DEFAULT_DB_PATH) -> dict[str, str]:
+def parse_and_save(url: str) -> dict[str, str]:
     html = fetch_html(url)
     title = extract_title(html)
-    save_page(url, title, "threading", db_path)
+    save_page_sync(url, title, "threading")
     print(f"[threading] {url} -> {title}")
     return {"url": url, "title": title}
 
 
-def worker(urls: list[str], db_path: str | Path, results: list[dict[str, str]], lock: threading.Lock) -> None:
+def worker(urls: list[str], results: list[dict[str, str]], lock: threading.Lock) -> None:
     for url in urls:
         try:
-            result = parse_and_save(url, db_path)
+            result = parse_and_save(url)
         except Exception as exc:
             result = {"url": url, "title": f"ERROR: {exc}"}
             print(f"[threading] {url} -> ERROR: {exc}")
@@ -44,8 +43,8 @@ def worker(urls: list[str], db_path: str | Path, results: list[dict[str, str]], 
             results.append(result)
 
 
-def run(urls: list[str], workers: int, db_path: str | Path) -> tuple[list[dict[str, str]], float]:
-    init_db(db_path)
+def run(urls: list[str], workers: int) -> tuple[list[dict[str, str]], float]:
+    init_db_sync()
     chunks = split_list(urls, workers)
     results: list[dict[str, str]] = []
     lock = threading.Lock()
@@ -55,7 +54,7 @@ def run(urls: list[str], workers: int, db_path: str | Path) -> tuple[list[dict[s
     for index, chunk in enumerate(chunks):
         thread = threading.Thread(
             target=worker,
-            args=(chunk, db_path, results, lock),
+            args=(chunk, results, lock),
             name=f"parser-worker-{index}",
         )
         thread.start()
@@ -71,7 +70,6 @@ def run(urls: list[str], workers: int, db_path: str | Path) -> tuple[list[dict[s
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Task 2: web parsing with threading")
     parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
     parser.add_argument("--url", action="append", dest="urls")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
@@ -80,7 +78,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     urls = args.urls or DEFAULT_URLS
-    results, elapsed = run(urls, args.workers, args.db)
+    results, elapsed = run(urls, args.workers)
     payload = {
         "approach": "threading",
         "workers": args.workers,
@@ -96,7 +94,6 @@ def main() -> None:
         print(f"Workers: {args.workers}")
         print(f"URLs: {len(urls)}")
         print(f"Saved rows: {len(results)}")
-        print(f"Database: {args.db}")
         print(f"Time: {elapsed:.6f} sec")
 
 
