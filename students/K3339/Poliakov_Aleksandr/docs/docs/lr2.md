@@ -16,12 +16,14 @@ Lr2/
 │   ├── asyncio_app.py
 │   └── benchmark.py
 └── task2/
-    ├── db.py                    # SQLite: init_db, save_page (UPSERT)
+    ├── config.py                # DB_URL из env/.env, sync + async URL
+    ├── models.py                # SQLModel ParsedPage
+    ├── db.py                    # init/save sync (psycopg2) и async (asyncpg)
     ├── html_title_parser.py     # извлечение <title> через html.parser
     ├── web_config.py            # DEFAULT_URLS, USER_AGENT
-    ├── threading_app.py         # threading + urllib
-    ├── multiprocessing_app.py   # multiprocessing + urllib
-    ├── asyncio_app.py           # asyncio + aiohttp
+    ├── threading_app.py         # threading + urllib + sync engine
+    ├── multiprocessing_app.py   # multiprocessing + urllib + sync engine
+    ├── asyncio_app.py           # asyncio + aiohttp + AsyncSession
     └── benchmark.py
 ```
 
@@ -122,21 +124,39 @@ async def calculate_sum(start, end, mode):
 - На «обходной» нагрузке (`formula`) задача сводится к одной операции на чанк, поэтому выигрывает подход с наименьшим оверхедом запуска — `asyncio`. У `multiprocessing` оверхед запуска пула на два порядка больше самой задачи.
 - Главный вывод: `asyncio` ≠ параллелизм. Для CPU нужны процессы или нативные расширения, а потоки полезны только если время реально проводят в ожидании I/O.
 
-## Задача 2. Параллельный парсинг сайтов с сохранением в SQLite
+## Задача 2. Параллельный парсинг сайтов с сохранением в Postgres из Lr1
 
-### Схема БД
+В этой задаче результаты пишутся не в локальный SQLite, а в **ту же Postgres-БД, что использует Лабораторная 1** (`finance_db` на `postgres:postgres@localhost:5432`). Для `asyncio`-варианта подключение к БД тоже асинхронное (`asyncpg` + `SQLAlchemy[asyncio]` + `AsyncSession`). Для `threading` и `multiprocessing` подключение остаётся синхронным (`psycopg2` + `Session`) — это естественно для соответствующих моделей параллелизма.
 
-```sql
-CREATE TABLE IF NOT EXISTS parsed_pages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    parser_type TEXT NOT NULL,
-    parsed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+### Запуск Postgres
+
+```bash
+cd Lr1
+docker compose up -d db          # сервис db из docker-compose.yml Lr1
+# параметры по умолчанию: postgres / postgres / finance_db / localhost:5432
 ```
 
-`UNIQUE(url) + ON CONFLICT DO UPDATE` — повторный парсинг той же страницы обновит запись, а не сломает прогон. Включён режим `journal_mode=WAL` и `busy_timeout=5000`, чтобы параллельные writer-ы из потоков/процессов не падали с `database is locked`.
+Lr1-app поднимать не нужно — Task 2 общается с Postgres напрямую.
+
+### Схема и модель
+
+Модель описана через SQLModel в `Lr2/task2/models.py`:
+
+```python
+class ParsedPage(SQLModel, table=True):
+    __tablename__ = "parsed_page"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    url: str = Field(index=True, unique=True)
+    title: str
+    parser_type: str
+    parsed_at: datetime = Field(default_factory=datetime.utcnow)
+```
+
+Таблица создаётся через `SQLModel.metadata.create_all` при первом запуске любого из вариантов (`init_db_sync()` или `await init_db_async()`). Миграции для Lr1 мы не правим — поэтому при работе с alembic в Lr1 **не нужно** делать `revision --autogenerate`, иначе оно попытается удалить «лишнюю» таблицу `parsed_page`. Обычное `alembic upgrade head` безопасно.
+
+### UPSERT-семантика
+
+В обоих стеках реализован один и тот же паттерн: `SELECT ... WHERE url = :url` → если строка есть, обновить `title`/`parser_type`, иначе вставить новую. Это даёт идемпотентность для повторных прогонов и нормально работает под параллельной записью благодаря `UNIQUE(url)`.
 
 ### Список страниц
 
@@ -153,51 +173,89 @@ DEFAULT_URLS = [
 
 `html_title_parser.TitleParser` наследуется от `html.parser.HTMLParser` и собирает текст между `<title>...</title>`. Если тег отсутствует — возвращается `<no title>`.
 
-### Threading
+### Threading (sync engine)
 
-Список URL делится «через интерливинг» (`urls[i::workers]`), каждый поток обрабатывает свой подсписок, общий результат собирается под `threading.Lock`.
+Список URL делится «через интерливинг» (`urls[i::workers]`), каждый поток обрабатывает свой подсписок, общий результат собирается под `threading.Lock`. Запись идёт через общий `Engine` SQLAlchemy — он thread-safe, каждая сессия получает отдельное соединение из пула.
 
 ```python
-def parse_and_save(url, db_path):
+def parse_and_save(url: str) -> dict[str, str]:
     html = fetch_html(url)
     title = extract_title(html)
-    save_page(url, title, "threading", db_path)
+    save_page_sync(url, title, "threading")
     return {"url": url, "title": title}
+
+def save_page_sync(url, title, parser_type) -> None:
+    with Session(get_sync_engine()) as session:
+        existing = session.exec(select(ParsedPage).where(ParsedPage.url == url)).first()
+        if existing is not None:
+            existing.title = title
+            existing.parser_type = parser_type
+        else:
+            session.add(ParsedPage(url=url, title=title, parser_type=parser_type))
+        session.commit()
 ```
 
-Поскольку `urllib.request` отпускает GIL во время сетевого ожидания, потоки реально работают параллельно — это и есть классический случай, где threading хорошо подходит.
+Поскольку `urllib.request` и `psycopg2` отпускают GIL во время сетевого ожидания, потоки реально работают параллельно — это классический случай, где threading хорошо подходит.
 
-### Multiprocessing
+### Multiprocessing (sync engine, ленивый на каждый процесс)
 
-Каждому процессу передаётся свой чанк URL и путь к общей БД. Сериализация результатов идёт через `Pool.map`. На запись каждый процесс делает своё короткое подключение к SQLite — за счёт WAL и busy_timeout запись из нескольких процессов работает корректно.
-
-### Asyncio + aiohttp
+`Engine` создаётся лениво при первом вызове `save_page_sync` — это важно: SQLAlchemy connection pool **не переживает fork**, поэтому каждый worker-процесс должен открыть свой пул сам. `init_db_sync()` вызывается в родительском процессе **до** `Pool.map`, чтобы таблица гарантированно существовала к моменту первой записи.
 
 ```python
-async def fetch_html(session, url):
-    async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-        resp.raise_for_status()
-        return await resp.text(errors="replace")
+def run(urls, workers):
+    init_db_sync()
+    chunks = split_list(urls, workers)
+    with mp.Pool(processes=workers) as pool:
+        nested = pool.map(worker_chunk, chunks)
+    return [item for c in nested for item in c]
 ```
 
-Запись в SQLite синхронная, поэтому `save_page` вызывается через `asyncio.to_thread`, чтобы не блокировать event loop.
+### Asyncio + aiohttp + asyncpg (полный async-стек)
 
-### Замеры — 8 URL, 4 воркера, 3 повтора
+Для асинхронного варианта подключение к БД — тоже асинхронное: `asyncpg` через `SQLAlchemy[asyncio]` (`create_async_engine` + `AsyncSession`). Никаких `asyncio.to_thread` для записи не остаётся — оба ожидания, и сетевое, и БД-шное, идут через event loop.
+
+```python
+async def parse_and_save(url, session):
+    html = await fetch_html(session, url)
+    title = extract_title(html)
+    await save_page_async(url, title, "asyncio")
+    return {"url": url, "title": title}
+
+async def save_page_async(url, title, parser_type):
+    async with _get_async_factory()() as session:
+        result = await session.execute(sa_select(ParsedPage).where(ParsedPage.url == url))
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            existing.title = title
+            existing.parser_type = parser_type
+        else:
+            session.add(ParsedPage(url=url, title=title, parser_type=parser_type))
+        await session.commit()
+```
+
+Конфиг URL автоматически берёт сначала `DB_URL` из env (или `.env` через `python-dotenv`), а для async-варианта подменяет `postgresql://` на `postgresql+asyncpg://`:
+
+```python
+SYNC_DB_URL  = os.getenv("DB_URL", "postgresql://postgres:postgres@localhost:5432/finance_db")
+ASYNC_DB_URL = SYNC_DB_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+```
+
+### Замеры — 8 URL, 4 воркера, 3 повтора, Postgres из Lr1
 
 | Подход | Min, сек | Mean, сек | Max, сек | Комментарий |
 |---|---:|---:|---:|---|
-| threading | 0.947 | 2.283 | 4.908 | Большая дисперсия — один медленный TLS-handshake тянет весь прогон |
-| multiprocessing | 0.882 | 0.958 | 1.092 | Стабильно, но оверхед на форк процессов |
-| asyncio | 0.574 | 0.598 | 0.641 | Самый быстрый и стабильный — один loop, нет переключения процессов |
+| threading | 0.867 | 1.092 | 1.540 | Большая дисперсия — один медленный URL тянет поток-«ведро» |
+| multiprocessing | 0.881 | 0.894 | 0.919 | Стабильно, но платит за `fork` + создание engine в каждом процессе |
+| asyncio | 0.597 | 0.699 | 0.878 | Полностью async-стек — самый быстрый |
 
-> Цифры зависят от сети — поэтому отчётный прогон делался подряд, без долгих пауз.
+> Цифры зависят от сети и от того, какие URL вернут 403 (часть сайтов фильтрует user-agent). Сами цифры стабильнее, чем у предыдущей SQLite-версии, потому что Postgres не упирается в single-writer-bottleneck.
 
 ### Выводы по задаче 2
 
-- I/O-bound задача — `asyncio` хорош ровно потому, что один event-loop держит много конкурентных запросов без создания системных потоков. Здесь он *быстрее* threading.
-- `threading` всё ещё работает (urllib отпускает GIL во время ожидания сокета), но имеет большую дисперсию: если один из URL отвечает медленно, отстаёт целый поток-«ведро».
-- `multiprocessing` для сетевого парсинга — стрельба из пушки по воробьям: оверхед на спавн процессов сравним со временем самих запросов, а никакой выгоды над потоками нет, потому что мы не упираемся в CPU.
-- Узкое место не всегда сеть. SQLite допускает одного writer-а одновременно — если URL-ов много и каждый требует записи, реальный «ускоритель» — это уже не concurrency на стороне Python, а параметры БД (WAL, batch insert).
+- I/O-bound задача — `asyncio` хорош ровно потому, что один event-loop держит много конкурентных запросов без создания системных потоков. С полным async-стеком (`aiohttp` + `asyncpg`) асинхронность работает «честно» от и до — нет ни одного `asyncio.to_thread`.
+- `threading` всё ещё работает (urllib и psycopg2 отпускают GIL на сетевом ожидании), но имеет большую дисперсию: если один из URL отвечает медленно, целый поток-«ведро» отстаёт.
+- `multiprocessing` для сетевого парсинга — стрельба из пушки по воробьям: оверхед на спавн процессов и инициализацию `Engine` в каждом сравним со временем самих запросов, а никакой выгоды над потоками нет, потому что мы не упираемся в CPU.
+- В отличие от SQLite, Postgres нормально держит параллельные writer-ы — узкое место теперь точно сеть, а не БД. Это и видно по тому, что `multiprocessing` перестал быть быстрее `threading`.
 
 ## Запуск
 
@@ -219,7 +277,9 @@ python task1/asyncio_app.py          --n 50000000 --mode loop --workers 4
 # Task 1 benchmark
 python task1/benchmark.py --n 50000000 --mode loop --workers 4 --repeats 3
 
-# Task 2
+# Task 2 — сначала поднимаем Postgres из Lr1
+(cd ../Lr1 && docker compose up -d db)
+
 python task2/threading_app.py        --workers 4
 python task2/multiprocessing_app.py  --workers 4
 python task2/asyncio_app.py          --workers 4
@@ -227,5 +287,7 @@ python task2/asyncio_app.py          --workers 4
 # Task 2 benchmark
 python task2/benchmark.py --workers 4 --repeats 3
 ```
+
+Адрес/креды БД по умолчанию — те же, что в Lr1 (`postgresql://postgres:postgres@localhost:5432/finance_db`). Можно переопределить через переменную `DB_URL` или файл `.env` рядом со скриптами.
 
 Все три entry-point скрипта для каждой задачи поддерживают `--json` для машинно-читаемого вывода (используется в benchmark.py).
