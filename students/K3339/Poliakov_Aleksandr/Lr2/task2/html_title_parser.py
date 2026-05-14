@@ -4,20 +4,20 @@ from html.parser import HTMLParser
 
 
 class TitleParser(HTMLParser):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self._inside_title = False
         self._parts: list[str] = []
 
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
         if tag.lower() == "title":
             self._inside_title = True
 
-    def handle_endtag(self, tag: str) -> None:
+    def handle_endtag(self, tag: str):
         if tag.lower() == "title":
             self._inside_title = False
 
-    def handle_data(self, data: str) -> None:
+    def handle_data(self, data: str):
         if self._inside_title:
             self._parts.append(data)
 

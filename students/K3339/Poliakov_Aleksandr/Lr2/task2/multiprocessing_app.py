@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     urls = args.urls or DEFAULT_URLS
     results, elapsed = run(urls, args.workers)

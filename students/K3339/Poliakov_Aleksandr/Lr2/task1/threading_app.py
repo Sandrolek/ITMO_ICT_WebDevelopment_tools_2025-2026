@@ -17,7 +17,7 @@ def run(n: int, workers: int, mode: str) -> tuple[int, float]:
     results = [0] * len(ranges)
     threads: list[threading.Thread] = []
 
-    def worker(index: int, start: int, end: int) -> None:
+    def worker(index: int, start: int, end: int):
         results[index] = calculate_sum(start, end, mode)
 
     started_at = time.perf_counter()
@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     result, elapsed = run(args.n, args.workers, args.mode)
     payload = {

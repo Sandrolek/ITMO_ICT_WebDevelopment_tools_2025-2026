@@ -32,7 +32,7 @@ def parse_and_save(url: str) -> dict[str, str]:
     return {"url": url, "title": title}
 
 
-def worker(urls: list[str], results: list[dict[str, str]], lock: threading.Lock) -> None:
+def worker(urls: list[str], results: list[dict[str, str]], lock: threading.Lock):
     for url in urls:
         try:
             result = parse_and_save(url)
@@ -75,7 +75,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     urls = args.urls or DEFAULT_URLS
     results, elapsed = run(urls, args.workers)

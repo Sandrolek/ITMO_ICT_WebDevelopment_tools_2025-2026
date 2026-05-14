@@ -22,11 +22,11 @@ def get_sync_engine():
     return _sync_engine
 
 
-def init_db_sync() -> None:
+def init_db_sync():
     SQLModel.metadata.create_all(get_sync_engine())
 
 
-def save_page_sync(url: str, title: str, parser_type: str) -> None:
+def save_page_sync(url: str, title: str, parser_type: str):
     with Session(get_sync_engine()) as session:
         existing = session.exec(
             select(ParsedPage).where(ParsedPage.url == url)
@@ -39,7 +39,7 @@ def save_page_sync(url: str, title: str, parser_type: str) -> None:
         session.commit()
 
 
-def dispose_sync_engine() -> None:
+def dispose_sync_engine():
     global _sync_engine
     if _sync_engine is not None:
         _sync_engine.dispose()
@@ -60,14 +60,14 @@ def _get_async_factory() -> async_sessionmaker[AsyncSession]:
     return _async_session_factory
 
 
-async def init_db_async() -> None:
+async def init_db_async():
     _get_async_factory()
     assert _async_engine is not None
     async with _async_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
 
-async def save_page_async(url: str, title: str, parser_type: str) -> None:
+async def save_page_async(url: str, title: str, parser_type: str):
     factory = _get_async_factory()
     async with factory() as session:
         result = await session.execute(
@@ -82,7 +82,7 @@ async def save_page_async(url: str, title: str, parser_type: str) -> None:
         await session.commit()
 
 
-async def dispose_async_engine() -> None:
+async def dispose_async_engine():
     global _async_engine, _async_session_factory
     if _async_engine is not None:
         await _async_engine.dispose()

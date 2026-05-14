@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main():
     args = parse_args()
     result, elapsed = run(args.n, args.workers, args.mode)
     payload = {
