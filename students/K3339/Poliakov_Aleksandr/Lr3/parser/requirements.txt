@@ -1,0 +1,7 @@
+fastapi[all]
+requests
+sqlmodel
+psycopg2-binary
+celery
+redis
+python-dotenv

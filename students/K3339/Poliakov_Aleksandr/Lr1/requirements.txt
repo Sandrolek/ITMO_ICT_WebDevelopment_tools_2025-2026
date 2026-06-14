@@ -7,3 +7,6 @@ passlib[bcrypt]
 bcrypt==4.0.1
 python-dotenv
 pydantic[email]
+httpx
+celery
+redis
