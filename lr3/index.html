@@ -1,0 +1,955 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Отчёты по практикам и лабораторным работам">
+      
+      
+        <meta name="author" content="Поляков Александр">
+      
+      
+      
+        <link rel="prev" href="../lr2/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Лабораторная 3 - ITMO Web Dev — Поляков Александр (K3339)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#3-docker-http-celery" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ITMO Web Dev — Поляков Александр (K3339)" class="md-header__button md-logo" aria-label="ITMO Web Dev — Поляков Александр (K3339)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ITMO Web Dev — Поляков Александр (K3339)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Лабораторная 3
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ITMO Web Dev — Поляков Александр (K3339)" class="md-nav__button md-logo" aria-label="ITMO Web Dev — Поляков Александр (K3339)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ITMO Web Dev — Поляков Александр (K3339)
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Главная
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pr1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Практика 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pr2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Практика 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pr3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Практика 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lr1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Лабораторная 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lr2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Лабораторная 2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Лабораторная 3
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Лабораторная 3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Архитектура
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Структура проекта
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lr2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Переиспользование парсера из Lr2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-dockerfile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Задача 1 — сервис-парсер и Dockerfile
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Задача 2 — вызов парсера из основного приложения
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-celery-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Задача 3 — очередь Celery + Redis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        docker-compose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Запуск и проверка
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что заметил
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Архитектура
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Структура проекта
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lr2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Переиспользование парсера из Lr2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-dockerfile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Задача 1 — сервис-парсер и Dockerfile
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Задача 2 — вызов парсера из основного приложения
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-celery-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Задача 3 — очередь Celery + Redis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        docker-compose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Запуск и проверка
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что заметил
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="3-docker-http-celery">Лабораторная 3 — Docker, HTTP-вызов парсера и очередь Celery</h1>
+<p><strong>Папка:</strong> <a href="https://github.com/Sandrolek/ITMO_ICT_WebDevelopment_tools_2025-2026/tree/lr1/students/K3339/Poliakov_Aleksandr/Lr3"><code>Lr3/</code></a></p>
+<p>Объединение наработок Lr1 (FastAPI + PostgreSQL) и Lr2 (парсер <code>&lt;title&gt;</code>) в одну
+Docker-оркестрацию. Парсер вынесен в отдельный сервис, вызывается из основного
+приложения по HTTP, а также в фоне через очередь Celery + Redis.</p>
+<h2 id="_1">Архитектура</h2>
+<table>
+<thead>
+<tr>
+<th>Сервис</th>
+<th>Сборка / образ</th>
+<th>Порт</th>
+<th>Роль</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>db</code></td>
+<td><code>postgres:16</code></td>
+<td>5432</td>
+<td>БД <code>finance_db</code></td>
+</tr>
+<tr>
+<td><code>api</code></td>
+<td><code>build: ../Lr1</code></td>
+<td>8000</td>
+<td>Приложение Lr1 + роутер <code>/parser</code></td>
+</tr>
+<tr>
+<td><code>parser</code></td>
+<td><code>build: ..</code> (<code>Lr3/parser/Dockerfile</code>)</td>
+<td>8001</td>
+<td>Отдельный FastAPI-сервис парсера</td>
+</tr>
+<tr>
+<td><code>redis</code></td>
+<td><code>redis:7</code></td>
+<td>6379</td>
+<td>Брокер и backend результатов Celery</td>
+</tr>
+<tr>
+<td><code>worker</code></td>
+<td>тот же образ, что <code>parser</code></td>
+<td>—</td>
+<td>Celery-воркер (фоновый парсинг)</td>
+</tr>
+</tbody>
+</table>
+<p>Поток данных:</p>
+<ul>
+<li><strong>Синхронно (Задача 2):</strong> клиент → <code>api</code> <code>POST /parser/parse</code> → httpx → <code>parser</code> <code>POST /parse</code> → fetch + extract + save в <code>db</code> → ответ клиенту.</li>
+<li><strong>Асинхронно (Задача 3):</strong> клиент → <code>api</code> <code>POST /parser/parse/async</code> → <code>send_task</code> в <code>redis</code> → <code>worker</code> выполняет задачу → результат в backend → клиент опрашивает <code>GET /parser/parse/async/{task_id}</code>.</li>
+</ul>
+<h2 id="_2">Структура проекта</h2>
+<pre><code>Lr3/
+├── docker-compose.yml      # db, api, parser, redis, worker
+├── README.md
+└── parser/
+    ├── Dockerfile          # копирует Lr2/task2/*.py + Lr3/parser/*.py в образ
+    ├── requirements.txt
+    ├── parser_core.py      # parse_and_store(url) — единый источник логики
+    ├── main.py             # FastAPI-сервис: POST /parse, GET /health
+    └── celery_app.py       # Celery + задача parse_url
+</code></pre>
+<h2 id="lr2">Переиспользование парсера из Lr2</h2>
+<p>Модули Lr2 (<code>html_title_parser.py</code>, <code>db.py</code>, <code>models.py</code>, <code>config.py</code>,
+<code>web_config.py</code>) импортируются как есть. Общая функция вызывается и HTTP-сервисом,
+и Celery-задачей — единый источник логики, без дублирования.</p>
+<pre><code class="language-python"># parser/parser_core.py
+import requests
+from db import save_page_sync           # из Lr2/task2
+from html_title_parser import extract_title  # из Lr2/task2
+from web_config import USER_AGENT             # из Lr2/task2
+
+def parse_and_store(url: str, parser_type: str = &quot;http&quot;) -&gt; dict[str, str]:
+    response = requests.get(url, headers={&quot;User-Agent&quot;: USER_AGENT}, timeout=15)
+    response.raise_for_status()
+    title = extract_title(response.text)
+    save_page_sync(url, title, parser_type)
+    return {&quot;url&quot;: url, &quot;title&quot;: title}
+</code></pre>
+<p>Парсер сделан синхронным (<code>requests</code> + <code>save_page_sync</code>), поэтому одна и та же
+функция работает и в FastAPI-сервисе, и в Celery-воркере.</p>
+<h2 id="1-dockerfile">Задача 1 — сервис-парсер и Dockerfile</h2>
+<p>Отдельное FastAPI-приложение, вызываемое по HTTP:</p>
+<pre><code class="language-python"># parser/main.py
+from fastapi import FastAPI, HTTPException
+import requests
+from db import init_db_sync
+from parser_core import parse_and_store
+
+app = FastAPI(title=&quot;Parser Service&quot;)
+
+@app.on_event(&quot;startup&quot;)
+def _startup():
+    init_db_sync()   # создаёт таблицу parsed_page (идемпотентно)
+
+@app.post(&quot;/parse&quot;)
+def parse(url: str):
+    try:
+        return {&quot;message&quot;: &quot;Parsing completed&quot;, **parse_and_store(url, &quot;http&quot;)}
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+</code></pre>
+<p>Один Dockerfile обслуживает и <code>parser</code>, и <code>worker</code> (команда задаётся в compose).
+Build-контекст — каталог <code>Poliakov_Aleksandr/</code>, поэтому в образ попадает код Lr2:</p>
+<pre><code class="language-dockerfile"># parser/Dockerfile
+FROM python:3.13-slim
+WORKDIR /app
+COPY Lr3/parser/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY Lr2/task2/ ./      # парсер из Lr2
+COPY Lr3/parser/ ./     # интеграционный код Lr3
+</code></pre>
+<h2 id="2">Задача 2 — вызов парсера из основного приложения</h2>
+<p>В приложение Lr1 добавлен роутер <code>/parser</code>. Синхронный эндпоинт проксирует
+запрос в сервис-парсер (отдельный контейнер) и возвращает результат клиенту:</p>
+<pre><code class="language-python"># Lr1/app/routers/parser.py
+import os, httpx
+from fastapi import APIRouter, HTTPException
+from celery import Celery
+
+router = APIRouter(prefix=&quot;/parser&quot;, tags=[&quot;parser&quot;])
+PARSER_URL = os.getenv(&quot;PARSER_URL&quot;, &quot;http://parser:8001&quot;)
+celery = Celery(&quot;client&quot;,
+                broker=os.getenv(&quot;CELERY_BROKER_URL&quot;, &quot;redis://redis:6379/0&quot;),
+                backend=os.getenv(&quot;CELERY_RESULT_BACKEND&quot;, &quot;redis://redis:6379/1&quot;))
+
+@router.post(&quot;/parse&quot;)                       # Задача 2 — синхронно через HTTP
+async def parse_sync(url: str):
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.post(f&quot;{PARSER_URL}/parse&quot;, params={&quot;url&quot;: url})
+        r.raise_for_status()
+        return r.json()
+</code></pre>
+<h2 id="3-celery-redis">Задача 3 — очередь Celery + Redis</h2>
+<p>Фоновая задача и конфигурация Celery:</p>
+<pre><code class="language-python"># parser/celery_app.py
+import os
+from celery import Celery
+from celery.signals import worker_ready
+from db import init_db_sync
+from parser_core import parse_and_store
+
+celery = Celery(&quot;parser&quot;,
+                broker=os.getenv(&quot;CELERY_BROKER_URL&quot;, &quot;redis://redis:6379/0&quot;),
+                backend=os.getenv(&quot;CELERY_RESULT_BACKEND&quot;, &quot;redis://redis:6379/1&quot;))
+
+@worker_ready.connect
+def _ensure_schema(**_):
+    init_db_sync()
+
+@celery.task(name=&quot;parse_url&quot;)
+def parse_url(url: str) -&gt; dict:
+    return parse_and_store(url, &quot;celery&quot;)
+</code></pre>
+<p>Эндпоинты постановки задачи и получения результата в роутере <code>/parser</code>:</p>
+<pre><code class="language-python">@router.post(&quot;/parse/async&quot;)                 # поставить в очередь
+def parse_async(url: str):
+    task = celery.send_task(&quot;parse_url&quot;, args=[url])
+    return {&quot;task_id&quot;: task.id, &quot;status&quot;: &quot;queued&quot;}
+
+@router.get(&quot;/parse/async/{task_id}&quot;)        # узнать статус/результат
+def parse_result(task_id: str):
+    res = celery.AsyncResult(task_id)
+    return {&quot;task_id&quot;: task_id, &quot;status&quot;: res.status,
+            &quot;result&quot;: res.result if res.successful() else None}
+</code></pre>
+<p><code>api</code> ставит задачу по имени (<code>send_task("parse_url", ...)</code>) — ему не нужен код
+задачи, только адрес брокера.</p>
+<h2 id="docker-compose">docker-compose</h2>
+<p>Все пять сервисов в одной сети, конфигурация — в секциях <code>environment</code>:</p>
+<pre><code class="language-yaml">services:
+  db:      # postgres:16, healthcheck pg_isready, volume pgdata
+  redis:   # redis:7
+  api:
+    build: { context: ../Lr1 }
+    environment:
+      DB_URL: postgresql://postgres:postgres@db:5432/finance_db
+      PARSER_URL: http://parser:8001
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    depends_on: [db (healthy), parser, redis]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+  parser:
+    build: { context: .., dockerfile: Lr3/parser/Dockerfile }
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+  worker:
+    build: { context: .., dockerfile: Lr3/parser/Dockerfile }
+    command: celery -A celery_app.celery worker --loglevel=info
+</code></pre>
+<h2 id="_3">Запуск и проверка</h2>
+<pre><code class="language-bash">cd Lr3
+docker compose up --build
+</code></pre>
+<p>Синхронный вызов (Задача 2):</p>
+<pre><code class="language-bash">curl -X POST &quot;http://localhost:8000/parser/parse?url=https://www.python.org/&quot;
+# {&quot;message&quot;:&quot;Parsing completed&quot;,&quot;url&quot;:&quot;https://www.python.org/&quot;,&quot;title&quot;:&quot;Welcome to Python.org&quot;}
+</code></pre>
+<p>Асинхронный вызов через очередь (Задача 3):</p>
+<pre><code class="language-bash">curl -X POST &quot;http://localhost:8000/parser/parse/async?url=https://pypi.org/&quot;
+# {&quot;task_id&quot;:&quot;...&quot;,&quot;status&quot;:&quot;queued&quot;}
+
+curl &quot;http://localhost:8000/parser/parse/async/&lt;task_id&gt;&quot;
+# {&quot;task_id&quot;:&quot;...&quot;,&quot;status&quot;:&quot;SUCCESS&quot;,&quot;result&quot;:{&quot;url&quot;:&quot;https://pypi.org/&quot;,&quot;title&quot;:&quot;PyPI · ...&quot;}}
+</code></pre>
+<p>Содержимое таблицы:</p>
+<pre><code class="language-bash">docker compose exec db psql -U postgres -d finance_db \
+  -c &quot;select url, title, parser_type from parsed_page;&quot;
+</code></pre>
+<p>Swagger: <code>http://localhost:8000/docs</code> (роутер <code>parser</code>) и <code>http://localhost:8001/docs</code>.</p>
+<h2 id="_4">Что заметил</h2>
+<ul>
+<li>Build-контекст <code>..</code> для <code>parser</code>/<code>worker</code> позволил переиспользовать код Lr2 без
+  копирования и дублирования — плоские импорты Lr2 (<code>from db import ...</code>)
+  работают, потому что модули копируются в рабочий каталог образа.</li>
+<li>Один образ на <code>parser</code> и <code>worker</code> — экономия на сборке; разница только в команде
+  запуска (<code>uvicorn</code> против <code>celery worker</code>).</li>
+<li>Синхронный парсер (<code>requests</code>) удобнее асинхронного для этой задачи: одна
+  функция <code>parse_and_store</code> переиспользуется и в FastAPI, и в Celery, где код всё
+  равно синхронный.</li>
+<li><code>send_task</code> по имени развязывает <code>api</code> и реализацию задачи: основному
+  приложению достаточно знать только адрес брокера.</li>
+<li>В команде <code>api</code> не используется <code>alembic upgrade head</code>: единственная миграция
+  Lr1 (add location) рассчитана на уже существующие таблицы и падает на чистом
+  томе. Схему создаёт сам app при старте через <code>on_startup</code> → <code>init_db</code>
+  (<code>SQLModel.metadata.create_all</code>), поэтому отдельный шаг миграций здесь не нужен.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
